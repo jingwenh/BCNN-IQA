@@ -3,6 +3,11 @@
 from data_preprocesser import normalize_image, random_crop_image, center_crop_image
 from data_preprocesser import resize_image, horizontal_flip_image
 from data_preprocesser import ImageDataGenerator
+from keras.preprocessing.image import load_img, img_to_array, array_to_img
+from keras.applications.resnet50 import preprocess_input
+from PIL import Image
+import pandas as pd
+import numpy as np
 
 def train_preprocessing(x, size_target=(448, 448)):
     '''Preprocessing for train dataset image.
@@ -90,6 +95,28 @@ def build_generator(
 
     return results
 
+def load_koniq(counts=100, target_size=(192, 256)):
+    label_path = "/data/yscode/QA_dataset/koniq10k_scores_and_distributions/koniq10k_scores_and_distributions.csv"
+    dataset_path = "/data/yscode/QA_dataset/koniq10k_1024x768/1024x768"
+    labels = pd.read_csv(label_path)
+    y = np.array(labels.iloc[:,1:6])
+    y = y[:counts]
+    y = y / np.sum(y, axis = 1, keepdims=True)
+
+    X = []
+    for fn in labels["image_name"][:counts]:
+        path = dataset_path + "/" + fn
+        img = Image.open(path)
+        img = resize_image(img, size_target=target_size)
+        img = img_to_array(img)
+        img = np.expand_dims(img, axis=0)
+        img = preprocess_input(img)
+        X.append(img)
+        if len(X) % 1000 == 0:
+            print("Loaded " + str(len(X)) + " images...")
+    X = np.concatenate(X, axis=0)
+
+    return X, y
 
 if __name__ == "__main__":
     pass
